@@ -33,52 +33,48 @@ def find_centermost_shape():
 def traverse_shapes(starting_shape=None):
 	# Traverse the shapes in breadth-first-search fashion.
 
-	# Start somewhere.
+	# state variables
 	shapes_remaining = set(neighbors)
 	queue = []
 	on_the_queue = set()
-	prev_shape = None
-	while len(shapes_remaining) > 0:
-		# Get the next shape to process.
 
-		# When the queue is empty but there are shapes remaining, we need
-		# to put something in the queue.
-		if len(queue) == 0:
-			if prev_shape is None:
-				# This is the first shape.
-				if starting_shape:
-					next_shape = starting_shape
-				else:
-					# Choose a random starting shape.
-					next_shape = random.choice(list(shapes_remaining))
-			else:
-				# We've reached the end of shapes connected to where we last
-				# started. Jump to another shape in a different contiguous region.
-				#
-				# Choose the shape that minimizes the distance to the previous shape so we
-				# move to the next closest region
-				def dist_to_prev_shape(s):
-					v = (centroids[s][0]-centroids[prev_shape][0], centroids[s][1]-centroids[prev_shape][1])
-					return math.sqrt(v[0]**2 + v[1]**2)
-				next_shape = min(shapes_remaining, key=dist_to_prev_shape)
+	# put the first shape on the queue
+	if starting_shape is None:
+		starting_shape = random.choice(list(shapes_remaining))
+	queue.append(starting_shape)
+	shapes_remaining.remove(starting_shape)
 
-			queue.append(next_shape)
-			on_the_queue.add(next_shape)
-
+	# iterate through shapes
+	while len(queue) > 0:
 		# Take something off the queue.
 		s = queue.pop(0)
 		yield s
 
-		# Mark that we've hit this shape.
-		shapes_remaining.remove(s)
+		# Append nearby shapes to the queue.
 
-		# Append its neighbors to the queue.
+		# Append any neighbors if it has any.
+		found = False
 		for n in neighbors[s]:
-			if n not in on_the_queue:
+			if n in shapes_remaining:
 				queue.append(n)
-				on_the_queue.add(n)
+				shapes_remaining.remove(n)
+				found = True
+		if found: continue
 
-		prev_shape = s
+		# There were no neighbors not yet processed.
+
+		# Jump to another shape in a different non-contiguous region.
+		# Choose the shape that minimizes the distance to s so we
+		# move to the next closest region. There may not be any more
+		# shapes left to jump to but the queue may still have shapes
+		# to process.
+		if len(shapes_remaining) > 0:
+			def dist_to_s(n):
+				v = (centroids[n][0]-centroids[s][0], centroids[n][1]-centroids[s][1])
+				return math.sqrt(v[0]**2 + v[1]**2)
+			next_shape = min(shapes_remaining, key=dist_to_s)
+			queue.append(next_shape)
+			shapes_remaining.remove(next_shape)
 
 def process_shapes():
 	# Assign shapes to a rectangular grid greedily.
