@@ -80,7 +80,7 @@ except:
 	raise
 	font = ImageFont.load_default()
 draw = ImageDraw.Draw(img)
-for k in pallette_labels:
+for k in pallette_centroid:
 	fw, fh = font.getsize(pallette_labels[k])
 	coord = pallette_centroid[k]
 	draw.rectangle([(coord[0]-1, coord[1]), (coord[0]+fw+1, coord[1]+fh*1.6)], fill=pallette[k])
