@@ -9,17 +9,17 @@ try:
 	geoidlen = int(geoidlen)
 	precision = int(precision)
 except:
-	print("Usage: python3 grid.txt 11 2")
+	print("Usage: python3 grid-to-png.py grid.txt 11 2")
 	sys.exit(1)
 
 # parse the grid into a Python array
 grid = []
 with open(gridfile) as f:
-	for line in f.read().strip().split("\n"):
+	for line in f.read().split("\n"):
 		row = []
 		grid.append(row)
 		for col in range(len(line)//(geoidlen+1)):
-			row.append( line[col*(geoidlen+1):(col+1)*(geoidlen+1)] )
+			row.append( line[col*(geoidlen+1):(col+1)*(geoidlen+1)-1] )
 
 # get the grid dimensions
 height = len(grid)
@@ -58,7 +58,6 @@ for i, k in enumerate(pallette):
 img = Image.new("RGB", (width, height), (0,0,0))
 for x in range(width):
 	for y in range(height):
-		if x >= len(grid[y]): continue # gotta fix this in cartogrid output
 		if grid[y][x].strip() == "": continue
 		color = pallette[ grid[y][x][0:precision] ]
 		img.putpixel( (x,y), color )
