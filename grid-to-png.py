@@ -45,9 +45,9 @@ pallette_colors = []
 k = int(math.sqrt( len(pallette) ))
 for i in range(len(pallette)):
 	c = colorsys.hsv_to_rgb(
-		(i % k) / float(k),
-		0.75,
-		0.4 + .6 * (i // float(k))/float(k)
+		(i % k) / float(k) + .1*(i // float(k))/float(k),
+		1.0,
+		0.3 + .7 * (i // float(k))/float(k)
 	)
 	pallette_colors.append( tuple([int(255*v) for v in c]) )
 random.shuffle(pallette_colors)
