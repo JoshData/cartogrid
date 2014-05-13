@@ -5,6 +5,9 @@ import sys, csv, math, random
 
 import tqdm
 
+# this is specific to the format of US Census Tract GEOIDs
+precisions = [5, 2, 0]
+
 def load_topology():
 	# Read the neighbors and centroids from the topology data
 	# provided on standard input.
@@ -50,31 +53,40 @@ def traverse_shapes(starting_shape=None):
 		s = queue.pop(0)
 		yield s
 
-		# Append nearby shapes to the queue.
+		# Append nearby shapes to the queue. Try to stay within the same political
+		# jurisdiction (county first, then state).
+		for precision in precisions:
+			
+			# Append any neighbors if it has any.
+			found = False
+			for n in neighbors[s]:
+				if (n[0:precision] == s[0:precision]) and (n in shapes_remaining):
+					queue.append(n)
+					shapes_remaining.remove(n)
+					found = True
+			if found: break
 
-		# Append any neighbors if it has any.
-		found = False
-		for n in neighbors[s]:
-			if n in shapes_remaining:
-				queue.append(n)
-				shapes_remaining.remove(n)
-				found = True
-		if found: continue
+			# There were no neighbors not yet processed.
 
-		# There were no neighbors not yet processed.
-
-		# Jump to another shape in a different non-contiguous region.
-		# Choose the shape that minimizes the distance to s so we
-		# move to the next closest region. There may not be any more
-		# shapes left to jump to but the queue may still have shapes
-		# to process.
-		if len(shapes_remaining) > 0:
+			# Jump to another shape in a different non-contiguous region.
+			# Choose the shape that minimizes the distance to s so we
+			# move to the next closest region.
 			def dist_to_s(n):
 				v = (centroids[n][0]-centroids[s][0], centroids[n][1]-centroids[s][1])
 				return math.sqrt(v[0]**2 + v[1]**2)
-			next_shape = min(shapes_remaining, key=dist_to_s)
-			queue.append(next_shape)
-			shapes_remaining.remove(next_shape)
+			try:
+				next_shape = min(
+					(n for n in shapes_remaining if n[0:precision] == s[0:precision]),
+					key=dist_to_s)
+
+				queue.append(next_shape)
+				shapes_remaining.remove(next_shape)
+				break # don't try a lower precision
+			except ValueError:
+				# a ValueError is raised when the iterator is empty, back out
+				# to the next precision. There may not be any more shapes left
+                # to jump to at all, but the queue may still have shapes to process.
+				continue
 
 def process_shapes():
 	# Assign shapes to a rectangular grid greedily.
@@ -148,20 +160,42 @@ def process_shapes():
 		# Put the next shape at a location on the periphery that minimizes distortion
 		# with existing shapes on the grid.
 
-		# First look for the grid cells on the periphery that maximimizes the number
-		# of adjacent shapes that are topologically adjacent.
-		scores = { }
-		for n in neighbors[shape]:
-			if n in shape_to_coord:
-				for g in get_grid_neighbors(shape_to_coord[n]):
-					if g in grid_perimeter:
-						scores[g] = scores.get(g, 0) + 1
-		if len(scores) > 0:
-			m = max(scores.values())
-			g1 = set(g for g in scores if scores[g] == m)
-		else:
-			# There may be no neighbors on the grid yet.
-			g1 = grid_perimeter
+		# If any neighbors are touching the periphery, choose from the part of the
+		# periphery that has the maximum number of shared edges with neighbors.
+		# Start also by looking in the same political jurisdiction.
+		for precision in precisions:
+			scores = { }
+			for n in neighbors[shape]:
+				if (n[0:precision] == shape[0:precision]) and (n in shape_to_coord):
+					for g in get_grid_neighbors(shape_to_coord[n]):
+						if g in grid_perimeter:
+							scores[g] = scores.get(g, 0) + 1
+			if len(scores) > 0:
+				# There are neighbors bordering the periphery.
+				m = max(scores.values())
+				g1 = set(g for g in scores if scores[g] == m)
+				break # don't try further precision values
+			else:
+				# There are no neighbors bordering the periphery. Choose among
+				# any grid cells in the periphery that borders any shapes in
+				# the same political jurisdiction.
+				scores = { g: 0 for g in grid_perimeter }
+				for p in scores:
+					for g in get_grid_neighbors(p):
+						if g in grid and grid[g][0:precision] == shape[0:precision]:
+							scores[p] += 1
+				m = max(scores.values())
+				if m > 0:
+					# There are some cells on the periphery that do touch a
+					# shape in the same political jurisdiction. Chose from
+					# among those cells. To keep things compact, roughly
+					# maximize the contiguity with shapes in the same
+					# jurisdiction by choosing among the cells that border
+					# more than m/3 shapes in the same jurisdiction.
+					# On the last iteration of precision there will be
+					# *some* shapes here.
+					g1 = set(g for g in scores if scores[g] > m/3)
+					break # don't try further precision values
 
 		# Of those, choose the coordinate that minimizes distortion. This part is crucial
 		# for getting north up.

@@ -43,10 +43,10 @@ Run the topology script which requires about 5.5 GB of free memory to figure out
 
 `topology.tsv` in 13 megabytes and has as many lines as there are tracts (74133).
 
-Run the cartogrid script which doesn't take much memory but instead runs for about ten hours trying to lay out the grid nicely:
+Run the cartogrid script which doesn't take much memory but instead runs for about 45 minutes trying to lay out the grid nicely:
 
 	python3 cartogrid.py < topology.tsv > grid.txt
-	Making grid: |##########| 74133/74133 100% [elapsed: 9:55:21 left: 00:00,  2.08 iters/sec]  
+	Making grid: |##########| 74133/74133 100% [elapsed: 43:38 left: 00:00, 28.31 iters/sec]
 
 The output is a 6.7 megabyte text file named `grid.txt` which contains GEOIDs placed into a fixed-character-width grid. It's like ASCII art. It has 507 lines and 1140 columns (of 12 character-wide columns, the first 11 characters of which is a tract GEOID). The Census's `GEOID` property on each tract concatenates the state FIPS code (two digits), the county FIPS code (three digits), and then a tract code (six digits).
 
