@@ -1,0 +1,9 @@
+ustracts/*.zip
+ustracts/*.shp
+ustracts/*.shp.xml
+ustracts/*.shx
+ustracts/*.dbf
+ustracts/*.prj
+topology.tsv
+grid.txt
+grid.png
